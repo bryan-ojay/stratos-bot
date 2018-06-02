@@ -1,0 +1,21 @@
+v0.2.2
+-
+
+v0.2.1
+- Optimized *stop!! and *clear! commands
+
+v0.2.0
+- bot now shows error messages for all *set Methods
+- *info: bot no longer deletes message asking for info.
+- Fixed bug with *deladmin where bot would crash if role doesn't exist in guild
+- Fixed bug with *info where bot would give the info of the last parsed track
+  if given an invalid link in the valid format
+- *stop!! command no longer resets the previously entered competitors
+- *setWeek, *clear and *admins added
+- Added support for setting week nums less than 10
+- *settrack no longer sets invalid soundcloud links in valid format
+- Implemented failsave if participants with the same name/title are added to a Challonge bracket
+
+
+v0.1.0
+- Initial release

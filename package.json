@@ -1,0 +1,34 @@
+{
+  "name": "stratos-bot",
+  "version": "0.2.1",
+  "description": "A bot used for the Triumphant Competition for the Elevate Discord.",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js"
+  },
+  "dependencies": {
+    "discord.js":"^11.3.2",
+    "challonge":"^2.1.1",
+    "snoowrap":"^1.15.2",
+    "follow-redirects":"^0.2.0"
+  },
+  "devDependencies":{
+     "follow-redirects":"^0.2.0"
+  },
+  "engines": {
+    "node": ">=4.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://gitlab.com/bryan-ojay/stratos-bot.git"
+  },
+  "keywords": [
+    "triumphant",
+    "stratos"
+  ],
+  "author": {
+    "name": "StreaK",
+    "email": "streaksounds@gmail.com"
+  },
+  "license": "MIT"
+}
