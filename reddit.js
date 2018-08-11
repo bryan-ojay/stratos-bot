@@ -2,7 +2,7 @@ const reddit = require('snoowrap');
 const sc = require('./soundcloud.js');
 const syst = require('./setup.js');
 const client = new reddit({
-  userAgent: "Stratos v0.2.1, a bot by StreaK",
+  userAgent: "Stratos v0.3.2, a bot by StreaK",
   clientId: 'CLIENT_ID',
   clientSecret: 'CLIENT_SECRET',
   username: 'USERNAME',
@@ -13,77 +13,77 @@ post = {};
 module.exports = {
   textPost: textPost,
   editWinner: editWinner,
-  delPost: delPost
+  delPost: delPost,
+  editPost: editPost
 }
 
 function textPost(){
   createBody()
-  link = client.getSubreddit('SUBREDDIT').submitSelfpost({
+  link = client.getSubreddit('elevate').submitSelfpost({
     title: 'Triumphant Week ' + syst.info.settings.week_title,
     text: post.body
   }).assignFlair({text: 'Triumphant', css_class: 'triumphant'})
   .then(sub => {
     post.name = (sub.name.slice(3))
     console.log(post.name)
-    syst.info.settings.reddit_link = "https://redd.it/" + sub.name.slice(3)
+    syst.info.config.reddit_link = "https://redd.it/" + sub.name.slice(3)
     syst.info.settings.reddit_info = post.body
-    syst.save('s')
+    syst.save('sc')
   })
   .catch(err => {
     if (err) {
       console.log("Reddit post unavailable");
-      syst.info.settings.reddit_link = "Temporarily Unavailable"
-      syst.save('s')
+      syst.info.config.reddit_link = "Temporarily Unavailable"
+      syst.save('c')
     }
   })
 }
 
 function createBody(){
   post.body =
-  `###[Submission Thread]( ${syst.info.settings.submit_thread} )\n\n---` +
+  `###[Submission Thread]( ${syst.info.config.submit_thread} )\n\n---` +
   "\n\n###[Tournament Bracket]" +
   "(http://challonge.com/tw" +  syst.info.settings.week_title +  ")" +
   "\n\n---\n\n**Competitors** |" +
   "\n-- |"
 
   syst.info.matches.tracks.forEach(function(track_info){
-    post.body += `\n[ ${track_info.title} ]( ${track_info.url} )|`
+    // make a clone of the track_info so it does not interfere with
+    // matches.json
+    const track = Object.create(track_info)
+    // if a pipe char exists in the title, format it in HTML
+    track.title = track.title.replace(/\|/g, '&#124;')
+    post.body += `\n[ ${track.title} ]( ${track.url} )|`
   })
 
   post.body += "\n ---"
 }
 
+function editPost() {
+  createBody()
+  link = syst.info.config.reddit_link.split("https://redd.it/")[1]
+  client.getSubmission(link).edit(post.body)
+        .then(() => {
+          console.log("Post edited.")
+          syst.info.settings.reddit_info = post.body
+          syst.save('s')
+        })
+        .catch(err =>  console.log(`Error editing post: ${err}`))
+}
+
 function editWinner(winner){
-  var link = syst.info.settings.reddit_link.split("https://redd.it/")[1]
-  winner_text = `\n\n###[ ${winner.artist} is Triumphant! ]` +
-  `( ${winner.url} )`
-  client.getSubmission(link).edit(syst.info.settings.reddit_info +
-                                  winner_text)
+  link = syst.info.config.reddit_link.split("https://redd.it/")[1]
+  winner_text = (winner.userID.length == 1) ?
+  `\n\n###[ ${winner.artist} is Triumphant! ]( ${winner.url} )`:
+  `\n\n###[ ${winner.artist} are Triumphant! ] ( ${winner.url} )`;
+  client.getSubmission(link).edit(syst.info.settings.reddit_info + winner_text)
         .then(console.log("Post updated."))
-        .catch(err => console.log("Error updating post:", err))
+        .catch(err => console.log(`Error updating post: ${err}`))
 }
 
 function delPost(){
-  var link = syst.info.settings.reddit_link.split("https://redd.it/")[1]
-  client.getSubmission(link).fetch()
-        .then(sub => {
-          sub.delete()
-          .then(console.log("Post deleted."))
-          .catch(err => console.log("Error deleting post:", err))
-        })
+  link = syst.info.config.reddit_link.split("https://redd.it/")[1]
+  client.getSubmission(link).delete()
+        .then(console.log("Post deleted."))
+        .catch(err => console.log(`Error deleting post: ${err}`))
 }
-
-
-syst.getSetup()
-post.body =
-`###[Submission Thread](http://reddit.com)\n\n---` +
-"\n\n###[Tournament Bracket]" +
-"(http://challonge.com/twtest1)" +
-"\n\n---\n\n**Competitors** |" +
-"\n-- |" +
-`\n[ Test 1 \\| Hope this works ](https://soundcloud.com/streaksounds)|` +
-`\n[ Test 2 \\| Hope this works ](https://soundcloud.com/streaksounds)|` +
-`\n[ Test 3 \\| Hope this works ](https://soundcloud.com/streaksounds)|` +
-`\n[ Test 4 \\| Hope this works ](https://soundcloud.com/streaksounds)|` +
-'\n ---'
-

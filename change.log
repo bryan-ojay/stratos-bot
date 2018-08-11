@@ -1,21 +1,38 @@
-v0.2.2
--
+v0.3.2
+- Now allowing tracks that have not been featured in a tournament to be changed.
+- *pong command added
+- Edited Sudden Death message
+- Fixed bugs in last update (showed testing details, config not fully implemented)
+
+v0.3.1
+- Various code optimizations and bug fixes (keywords: config, bot functions)
+
+v0.3.0
+- New Sudden Death feature added: If a triumphant match ends in a tie, a sudden death vote will be called.
+  The first to vote for a track within 3 minutes decides the winner.
+- *submit and *setsubmit commands added to view and edit the submission thread link
+- *competitors command added to show the competitors in the weekly tournament
+- Optimized creation of Challonge tournament bracket
+- Fixed bug where Challonge would ignore part of a song title if it contained an ampersand (&).
+- Fixed bug where table on Reddit post would not format correctly with a separator (|) in a track title.
+- Fixed bug where the #triumphant channel topic would not immediately change when a new tournament starts.
+- Updated grammar on subreddit post for when a track with multiple artists wins the tournament.
 
 v0.2.1
-- Optimized *stop!! and *clear! commands
+- Optimized *stop!! and *clear! commands.
 
 v0.2.0
-- bot now shows error messages for all *set Methods
+- bot now shows error messages for all *set methods.
 - *info: bot no longer deletes message asking for info.
-- Fixed bug with *deladmin where bot would crash if role doesn't exist in guild
-- Fixed bug with *info where bot would give the info of the last parsed track
-  if given an invalid link in the valid format
-- *stop!! command no longer resets the previously entered competitors
-- *setWeek, *clear and *admins added
-- Added support for setting week nums less than 10
-- *settrack no longer sets invalid soundcloud links in valid format
-- Implemented failsave if participants with the same name/title are added to a Challonge bracket
-
+- Fixed bug with *deladmin where bot would crash if role doesn't exist in guild.
+- Fixed bug with *info where bot would give the info of the last parsed track.
+  if given an invalid link in the valid format.
+- *stop!! command no longer resets the previously entered competitors.
+- *setWeek, *clear and *admins added.
+- Added support for setting week nums less than 10.
+- *settrack no longer sets invalid soundcloud links in valid format.
+- Implemented failsave if participants with the same name/title are added to a Challonge bracket.
+- *continue can no longer be called on an already running tournament
 
 v0.1.0
 - Initial release

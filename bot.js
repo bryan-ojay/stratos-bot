@@ -10,41 +10,59 @@ var info = {}
 var end_round = false
 var stop_tourney = false
 var in_progress = false
+var sd_vote = {}
 
 /** Discord **/
 // ready to connect
 client.on('ready', () => {
   console.log(`Logged in as ${client.user.tag}!`);
-});
+})
 
 client.on('error', err => {
   console.log(err);
-});
+})
 
 
 // message event
 client.on('message', msg => {
   //check if user has privileges to use locked bot commands
   //this keeps giving errors for some reason so it gets its own try/catch
-  try{
-    isAdmin = msg.member.roles.some(r=>syst.info.settings.admin_roles.includes(r.name))
+  try {
+    isAdmin = msg.member.roles.some(r=>syst.info.config.admin_roles.includes(r.name))
   }
   catch(err){isAdmin = false}
 
-  try{ //failsave in case an unknown error is thrown
+  try { //failsave in case an unknown error is thrown
+
+    //Ping commands
     if (msg.content == '*ping') {
       msg.channel.send('Pong!');
     }
 
-    //checks if user has special privileges
+    else if (msg.content == '*pong') {
+      msg.channel.send('Ping.')
+    }
+
+    //Logout Bot command
+    else if (msg.content == '*ded!!' && isAdmin)  {
+      msg.channel.send('Logging off...');
+      client.destroy()
+      .then(console.log("Logged off Discord."))
+      .catch(err => {
+        msg.channel.send(`Uhh, I can't log off. Here's why: ${err}`)
+        console.log(err);
+      })
+    }
+
+    //"Check if admin" commmand
     if (msg.content == '*admin?') {
       setTimeout(function(){
         if (isAdmin) msg.channel.send("Yep!")
         else msg.channel.send("Nope!")
-      }, 250)
+      }, 150)
     }
 
-    //get info of track on SoundCloud
+    //Get SoundCloud info command
     else if (msg.content.startsWith('*info ')) {
       var sc_link = msg.content.split('*info ')[1]
       msg.channel.send('Loading info...')
@@ -62,24 +80,76 @@ client.on('message', msg => {
       })
     }
 
-    //the bot will copy what you say, but in code text
+    //"Copy text" command
     else if (msg.content.startsWith('*text ')) {
       msg.channel.send("`" + msg + "`")
     }
 
-    else if (msg.content == ('*admins')) {
-      msg.channel.send(`Admin roles: ${syst.info.settings.admin_roles}`)
+    //Get Admin Roles command
+    else if (msg.content == '*admins') {
+      msg.channel.send(`Admin roles: ${syst.info.config.admin_roles}`)
     }
 
-    //add admin roles
+    //Get weekly competitors command
+    else if (msg.content == '*competitors') {
+      comp_list = ''
+      for (i = 0; i < 8; i++) {
+        comp_list += `${i+1}. ${syst.info.matches.tracks[i].userID} // `
+                   + `[${syst.info.matches.tracks[i].title}]`
+                   + `(${syst.info.matches.tracks[i].url})\n\n`
+      }
+      comp_embed = {
+        "embed": {
+          "author": {
+            "name": "Competitors",
+            "url": "https://challonge.com/tw"
+            + syst.info.settings.week_title,
+            "icon_url": syst.info.config.embed_icons[0]
+          },
+          "description": comp_list,
+          "color": syst.info.config.embed_colours[0],
+          "footer": {
+            "icon_url": syst.info.config.footer_thumbnail,
+            "text": syst.info.config.info
+          },
+        }
+      }
+      msg.channel.send(comp_embed)
+    }
+
+    //Get Submission Thread command
+    else if (msg.content.split(' ')[0] == '*submit') {
+      msg.channel.send("Want to be featured in Triumphant? "
+      + "Submit your tracks for a better chance to be picked!:"
+      + `\n${syst.info.config.submit_thread}`)
+    }
+
+    //Set Submission Thread command
+    else if (msg.content.startsWith('*setsubmit ') && isAdmin) {
+      msg_split = msg.content.split(' ')
+      link = msg_split[1]
+      msg.channel.send("Setting submission thread...")
+      .then(thisMsg => {
+          progMsg = thisMsg
+          syst.setSubmit(link)
+          progMsg.edit(`Submission thread set to <${link}>`)
+      })
+      .catch(err => {
+        progMsg.edit(`Error setting submission thread: ${err}`)
+        console.log(err);
+      })
+      msg.delete(2000)
+    }
+
+    //Add Admin Roles command
     else if (msg.content.startsWith('*addadmin ') && isAdmin) {
       newRole = msg.guild.roles.find("name", msg.content.slice(10))
 
-      if (newRole && !(syst.info.settings.admin_roles.includes(newRole.name))) {
+      if (newRole && !(syst.info.config.admin_roles.includes(newRole.name))) {
         syst.addAdmin(newRole.name)
         msg.channel.send("Admin role added.")
       }
-      else if (syst.info.settings.admin_roles.includes(newRole.name)) {
+      else if (syst.info.config.admin_roles.includes(newRole.name)) {
         msg.channel.send("This is already an admin role.")
       }
       else {
@@ -87,10 +157,10 @@ client.on('message', msg => {
       }
     }
 
-    //delete admin roles
+    //Delete Admin Roles command
     else if (msg.content.startsWith('*deladmin ') && isAdmin) {
       oldRole = msg.content.slice(10)
-      if (syst.info.settings.admin_roles.includes(oldRole)) {
+      if (syst.info.config.admin_roles.includes(oldRole)) {
         syst.delAdmin(oldRole)
         msg.channel.send("Role deadmined.")
       }
@@ -99,47 +169,34 @@ client.on('message', msg => {
       }
     }
 
-    // kill bot
-    else if (msg.content == '*ded!!' && isAdmin)  {
-      msg.channel.send('Logging off...');
-      client.destroy()
-      .then(console.log("Logged off Discord."))
+    //Set Track command
+    else if (msg.content.startsWith('*settrack ') && isAdmin) {
+      msg_split = msg.content.split(' ')
+      num = msg_split[1]
+      link = msg_split[2]
+      tags = msg_split.slice(3)
+      msg.channel.send("Adding track...")
+      .then(thisMsg => {
+        progMsg = thisMsg
+        syst.setTrack(num, link, tags)
+        setTimeout(function(){
+          progMsg.edit(`Added "${sc.info.title}" as track ${num}.` +
+                       `\n<` + link + '>')
+          // checks if tournament is active to update bracket and reddit post
+          if (syst.info.settings.tournament_started) {
+            redd.editPost()
+            chal.change(syst.info.settings.week_title, num - 1, syst.info.matches.tracks[num - 1].title)
+          }
+        }, 1850)
+      })
       .catch(err => {
-        msg.channel.send(`Uhh, I can't log off. Here's why: ${err}`)
+        progMsg.edit(`Error setting track: ${err}`)
         console.log(err);
       })
+      msg.delete(2000)
     }
 
-    //set tracks for the week
-    else if (msg.content.startsWith('*settrack ') && isAdmin) {
-      // can't set a track if tournament has started
-      if (syst.info.settings.tournament_started){
-        msg.channel.send("A triumphant tournament is in progress. "
-        + "Please try again later.")
-      }
-      else {
-        msg_split = msg.content.split(' ')
-        num = msg_split[1]
-        link = msg_split[2]
-        tags = msg_split.slice(3)
-        msg.channel.send("Adding track...")
-        .then(thisMsg => {
-          progMsg = thisMsg
-          syst.setTrack(num, link, tags)
-          setTimeout(function(){
-            progMsg.edit(`Added "${sc.info.title}" as track ${num}.` +
-                         `\n<` + link + '>')
-          }, 1850)
-        })
-        .catch(err => {
-          progMsg.edit(`Error adding track: ${err}`)
-          console.log(err);
-        })
-        msg.delete(2000)
-      }
-    }
-
-    //set week number (mostly used for testing)
+    //Set Week Number command
     else if (msg.content.startsWith('*setweek ') && isAdmin){
       msg_split = msg.content.split(' ')
       num = msg_split[1]
@@ -156,7 +213,7 @@ client.on('message', msg => {
       msg.delete(2000)
     }
 
-    //set header image for each week
+    //Set Header Image command
     else if (msg.content.startsWith('*setheader ') && isAdmin){
       msg_split = msg.content.split(' ')
       num = msg_split[1]
@@ -165,7 +222,7 @@ client.on('message', msg => {
       .then(thisMsg => {
           progMsg = thisMsg
           syst.setHeader(num, link)
-          progMsg.edit("Header set: \n<" + link + ">")
+          progMsg.edit(`Header ${num} set: \n<${link}>`)
       })
       .catch(err => {
         progMsg.edit(`Error setting header: ${err}`)
@@ -174,26 +231,34 @@ client.on('message', msg => {
       msg.delete(2000)
     }
 
-    //set the emoji people will use to vote
+    //Set Voting Emoji command
     else if (msg.content.startsWith('*setemoji ') && isAdmin){
-      msg_split = msg.content.split(' ')
-      num = msg_split[1]
-      emote = msg_split[2]
-      msg.channel.send("Setting emote...")
-      .then(thisMsg => {
-          progMsg = thisMsg
-          syst.setEmoji(num, emote)
-          progMsg.edit(`Emote ${num} set to ${emote}.`)
-      })
-      .catch(err => {
-        progMsg.edit(`Error setting emote: ${err}`)
-        console.log(err);
-      })
-      msg.delete(2000)
+      // can't set a new emoji if a tournament has started
+      if (syst.info.settings.tournament_started){
+        msg.channel.send("A triumphant tournament is in progress. "
+        + "Please try again later.")
+      }
+      else{
+        msg_split = msg.content.split(' ')
+        num = msg_split[1]
+        emote = msg_split[2]
+        msg.channel.send("Setting emote...")
+        .then(thisMsg => {
+            progMsg = thisMsg
+            syst.setEmoji(num, emote)
+            progMsg.edit(`Emote ${num} set to ${emote}.`)
+        })
+        .catch(err => {
+          progMsg.edit(`Error setting emote: ${err}`)
+          console.log(err);
+        })
+        msg.delete(2000)
+      }
     }
 
-    //set special event
+    //Set Special Event command
     else if (msg.content.startsWith('*setspecial ') && isAdmin){
+      // can't set a new special event if a tournament has started
       if (syst.info.settings.tournament_started){
         msg.channel.send("A triumphant tournament is in progress. "
         + "Please try again later.")
@@ -206,7 +271,6 @@ client.on('message', msg => {
             progMsg = thisMsg
             syst.setSpecial('[' + desc + ']')
             progMsg.edit(`Special event set: ${desc}`)
-            progMsg.delete(2000)
         })
         .catch(err => {
           progMsg.edit(`Error setting special event: ${err}`)
@@ -216,12 +280,14 @@ client.on('message', msg => {
       }
     }
 
-    //reset special event
-    else if (msg.content == ('*delspecial') && isAdmin){
+    //Delete Special Event command
+    else if (msg.content == '*delspecial' && isAdmin){
+      // can't remove the special event if the tournament has started
       if (syst.info.settings.tournament_started){
         msg.channel.send("A triumphant tournament is in progress. "
         + "Please try again later.")
       }
+      // can't remove an already removed special event
       else if (syst.info.settings.special == ''){
         msg.channel.send("There is no special event to remove.")
       }
@@ -231,7 +297,6 @@ client.on('message', msg => {
             progMsg = thisMsg
             syst.setSpecial('')
             progMsg.edit('Special event removed.')
-            progMsg.delete(2000)
         })
         .catch(err => {
           progMsg.edit(`Error removing special event: ${err}`)
@@ -241,9 +306,10 @@ client.on('message', msg => {
       }
     }
 
-    // Start tournament
-    else if ((msg.content == '*start' || msg.content.startsWith('*start ')
-             || msg.content == '*continue') && isAdmin) {
+    //Start Tournament command
+    else if ((msg.content.split(' ')[0] == '*start'
+            || msg.content == '*continue') && isAdmin) {
+      const chan = msg.guild.channels.find('name', 'triumphant');
 
       // can't start a tournament when another tournament is in progress
       if (msg.content.startsWith('*start') &&
@@ -257,8 +323,9 @@ client.on('message', msg => {
        msg.channel.send("There's no tournament currently in progress.")
       }
 
+      // can't continue a tournament that's already running
       else if (msg.content == '*continue' && in_progress){
-        msg.channel.send("The timer is currently running already.")
+        msg.channel.send("The timer is already running.")
       }
 
       else {
@@ -274,10 +341,12 @@ client.on('message', msg => {
          .then(thisMsg => {
            starting = setInterval(function(){
              countdown -= 1
+             // Countdown until it hits 0
              if (countdown != 0){
                thisMsg.edit("Triumphant Week " + syst.info.settings.week_title
                             + " starting in: " + countdown)
              }
+             // start the tournament once countdown reaches 0
              else if (countdown == 0){
                clearInterval(starting)
                thisMsg.edit(`Tournament starting...`)
@@ -290,7 +359,6 @@ client.on('message', msg => {
                }
                else{startMatch(0)}
                msg.delete(1000)
-
              }
            }, 1000)
          })
@@ -300,11 +368,10 @@ client.on('message', msg => {
          })
        }
 
-       // continue a paused tournament (most likely if bot crashes)
+       // continue a paused tournament
        else if (msg.content == '*continue') {
-         //set flags for matchup and embed message save points
+         //set flags for finding matchup and embed message save points
          foundMatchup = foundEmbed = false
-         const chan = msg.guild.channels.find('name', 'triumphant');
          msg.channel.send("Finding save point...")
          .then(thisMsg => {
            // get current time and update timer, given the embed msg is found
@@ -354,31 +421,20 @@ client.on('message', msg => {
            // if both matchups are found, restart the tournament matchup
            if (foundMatchup && foundEmbed){
              // end round if match is restarted after original end voting time
-             if (curr_time > end_time) {
-               msg.channel.send("This match has run over time. " +
-                           "Voters have 1 minute left to vote...")
-               .then(delMsg => {
-                 delMsg.delete(60000)
-                 runTimer(matchNum, curr_time, end_time,
-                          matchupMsg, embedMsg, voteTime)
-               })
-               .catch(err => {
-                 saveMsg.edit(`Error restarting matchup: ${err}`)
-                 console.log(err);
-               })
-             }
-             else {
-               msg.channel.send("Timer resuming in 1 minute...")
-                  .then(delMsg => {
-                    delMsg.delete(60000)
-                    runTimer(matchNum, curr_time, end_time,
-                             matchupMsg, embedMsg, voteTime)
-                  })
-                  .catch(err => {
-                    saveMsg.edit(`Error restarting matchup: ${err}`)
-                    console.log(err);
-                  })
-              }
+             confirmMsg = (curr_time >= end_time) ?
+             ("This match has run over time. " +
+             "Voters have 1 minute left to vote..."):
+             ("Timer resuming in 1 minute...")
+             msg.channel.send(confirmMsg)
+             .then(delMsg => {
+               delMsg.delete(60000)
+               runTimer(matchNum, curr_time, end_time,
+                        matchupMsg, embedMsg, voteTime)
+             })
+             .catch(err => {
+               saveMsg.edit(`Error restarting matchup: ${err}`)
+               console.log(err);
+             })
            }
            else {
              saveMsg.edit("Could not restart matchup, save point(s) not found.")
@@ -386,265 +442,10 @@ client.on('message', msg => {
           }, 2000)
         }
       }
-      // Posts header image
-      // Also sets channel topic if on the first match
-      function startMatch(matchNum, voteTime = 1435){
-        //start tournament and update settings
-        syst.info.settings.tournament_started = true;
-        syst.info.matches.progress.match = matchNum
-        syst.info.matches.progress.voteTime = voteTime
-        syst.save()
-        console.log('Sending message in #triumphant...');
-        const chan = msg.guild.channels.find('name', 'triumphant');
-        // change channel topic for new week
-        if (matchNum == 1) {
-          topic = "👁‍🗨 ʀᴇᴀᴅ-ᴏɴʟʏ " +
-                  "\n| Channel for daily Triumphant voting." +
-                  "\n| 💿 SUBMIT YOUR TRACKS HERE: " +
-                  syst.info.settings.submit_thread +
-                  "\n| 🏅 Tournament Bracket: https://challonge.com/tw" +
-                  syst.info.settings.week_title
-          chan.setTopic(topic);
-        }
-        // get competitors from settings
-        var competitors = syst.info.matches[rounds[matchNum]]
-        // upload attachment
-        chan.send({
-          files:[syst.info.settings.header_images[matchNum]]
-        }).then(setTimeout(postMatch, 2000));
-
-        // Posts daily matchup and reactions
-        function postMatch(){
-          var matchup = ''
-          for (i = 0; i < 2; i++){
-              matchup += syst.info.settings.emojis[i] + competitors[i].userID +
-                         ' // ' + competitors[i].title + '\n' +
-                         competitors[i].url + '\n\n'
-          }
-          chan.send(matchup)
-          .then(matchupMsg => { //react to post
-            for (i = 0; i < 2; i++){
-              matchupMsg.react(syst.info.settings.emojis[i].slice(-19,-1))
-              .then()
-              .catch(err => {
-                msg.channel.send(`Error adding reactions: ${err}`)
-                console.log(err)
-              })
-            }
-            postEmbed(matchupMsg)
-          })
-        }
-        // Posts embed with match and weekly triumphant info
-        function postEmbed(matchupMsg){
-          // set timer (and save points in case bot crashes)
-          // update settings
-          var time = (new Date().getTime())
-          run_time = syst.info.settings.start = (time - (time % 60000)) / 60000
-          end_time = syst.info.settings.end = run_time + voteTime
-          syst.save('s')
-          formatTime(end_time - run_time)
-
-          //embed template
-          embed_desc = `[${competitors[0].title}](${competitors[0].url})`
-          + `\nVS\n`+ `[${competitors[1].title}](${competitors[1].url})`
-          embed = {
-            "embed": {
-              "author": {
-                "name": "Triumphant Week " + syst.info.settings.week_title
-                + ' ' + syst.info.settings.special,
-                "url": "https://challonge.com/tw"
-                + syst.info.settings.week_title,
-                "icon_url": syst.info.settings.embed_icons[matchNum]
-              },
-              "description": embed_desc,
-              "color": syst.info.settings.embed_colours[matchNum],
-              "footer": {
-                "icon_url": syst.info.settings.footer_thumbnail,
-                "text": syst.info.settings.info
-              },
-              "thumbnail": {"url": syst.info.settings.embed_thumbnail},
-              "fields": [
-                {
-                  "name": "This Week's Competitors",
-                  "value": syst.info.settings.reddit_link
-                },
-                {
-                  "name": "Tournament Bracket",
-                  "value": "https://challonge.com/tw"
-                  + syst.info.settings.week_title,
-                },
-                {
-                  "name": "Submission Thread",
-                  "value": syst.info.settings.submit_thread
-                },
-                {
-                  "name": "Time Left To Vote",
-                  "value": info.time
-                }
-              ]
-            }
-          }
-          chan.send(embed)
-          .then(embedMsg => {
-            syst.info.settings.matchup_id = matchupMsg.id
-            syst.info.settings.embed_id = embedMsg.id
-            syst.info.settings.embed = embed
-            syst.info.matches.progress.status[matchNum] = [1,0]
-            syst.save()
-            runTimer(matchNum, run_time, end_time, matchupMsg, embedMsg, voteTime)
-          })
-          .catch(err => {
-            msg.channel.send(`Error posting timer: ${err}`)
-            console.log(err)
-          })
-        }
-      }
-      //format time to hours and minutes
-      function formatTime(i){
-        hr = (i - (i % 60)) / 60 // integer division
-        min = i % 60
-        if (hr > 1 && min > 1) {info.time = `${hr} hours, ${min} minutes`}
-        else if (hr > 1 && min == 1) {info.time = `${hr} hours, ${min} minute`}
-        else if (hr == 1 && min > 1) {info.time = `${hr} hour, ${min} minutes`}
-        else if (hr == 1 && min == 1) {info.time = `${hr} hour, ${min} minute`}
-        else if (hr > 1) {info.time = `${hr} hours`}
-        else if (hr == 1) {info.time = `${hr} hour`}
-        else if (min > 1) {info.time = `${min} minutes`}
-        else if (min == 1) {info.time = `${min} minute`}
-      }
-      // start the timer on the embed
-      function runTimer(matchNum, start, end, matchupMsg, timerMsg, voteTime){
-        reacts = {}
-        const chan = msg.guild.channels.find('name', 'triumphant');
-        embed = syst.info.settings.embed
-        in_progress = true
-        var timeout = setInterval(function(){
-          //end round early
-          if (end_round) {
-            start = end
-            end_round = false
-          }
-          else start += 1
-
-          // when timer reaches 0, collect reaction scores and update embed
-          if (start >= end && !(stop_tourney)) {
-            // collect scores for each reaction
-            chan.fetchMessage(matchupMsg.id).then(thisMsg => {
-              thisMsg.reactions.forEach(object => {
-                reacts[object._emoji.id] = object.count
-              });
-            });
-            setTimeout(function() {
-              //record scores and send to challonge bracket
-              var score1 = reacts[syst.info.settings.emojis[0].slice(-19,-1)]
-              var score2 = reacts[syst.info.settings.emojis[1].slice(-19,-1)]
-              if (score1 == score2) score1 -= 1
-              score_desc = `${score1}-${score2}`
-              chal.update(syst.info.settings.week_title, matchNum,
-                          score1, score2)
-              // update embed
-              delete embed.embed.color
-              embed.embed.fields[3].value = "Round Over"
-              embed.embed.fields[4] = {
-                "name": "Score",
-                "value": score_desc
-              }
-              timerMsg.edit(embed)
-              .then(function(){
-                //update the match progress
-                //declare winner, move to semis/finals
-                //if this matchup is the finals, declare the winner Triumphant
-                syst.info.matches.progress.status[matchNum] = [1,1]
-                syst.save('m')
-                switch(matchNum){
-                  case 0:
-                    syst.info.matches.semi1[0] = (score1 > score2) ?
-                    syst.info.matches.duel1[0] : syst.info.matches.duel1[1];
-                    setTimeout(function(){startMatch(1, voteTime)}, 10000)
-                    break;
-                  case 1:
-                    syst.info.matches.semi1[1] = (score1 > score2) ?
-                    syst.info.matches.duel2[0] : syst.info.matches.duel2[1];
-                    setTimeout(function(){startMatch(2, voteTime)}, 10000)
-                    break;
-                  case 2:
-                    syst.info.matches.semi2[0] = (score1 > score2) ?
-                    syst.info.matches.duel3[0] : syst.info.matches.duel3[1];
-                    setTimeout(function(){startMatch(3, voteTime)}, 10000)
-                    break;
-                  case 3:
-                    syst.info.matches.semi2[1] = (score1 > score2) ?
-                    syst.info.matches.duel4[0] : syst.info.matches.duel4[1];
-                    setTimeout(function(){startMatch(4, voteTime)}, 10000)
-                    break;
-                  case 4:
-                    syst.info.matches.final[0] = (score1 > score2) ?
-                    syst.info.matches.semi1[0] : syst.info.matches.semi1[1];
-                    setTimeout(function(){startMatch(5, voteTime)}, 10000)
-                    break;
-                  case 5:
-                    syst.info.matches.final[1] = (score1 > score2) ?
-                    syst.info.matches.semi2[0] : syst.info.matches.semi2[1];
-                    setTimeout(function(){startMatch(6, voteTime)}, 10000)
-                    break;
-                  case 6:
-                    winner = syst.info.matches.winner = (score1 > score2) ?
-                    syst.info.matches.final[0] : syst.info.matches.final[1];
-
-                    if (winner.userID.length == 1) {
-                      winMsg = `${winner.userID} **is Triumphant!**\n ` +
-                                `${winner.url}`
-                    }
-                    else {
-                      winMsg = `${winner.userID} **are Triumphant!**\n ` +
-                                `${winner.url}`
-                    }
-                    chan.send(winMsg)
-                        .then(winnerMsg => {
-                          winnerMsg.react('🏆')
-                          winnerMsg.react('🔥')
-                          redd.editWinner(winner)
-
-                          setTimeout(function(){
-                            chal.final(syst.info.settings.week_title)
-                            syst.setWeekNum((syst.info.settings.week_num) + 1)
-                            syst.reset()
-                          }, 500)
-                        })
-                        .catch(err => {
-                          chan.send(`Error declaring winner: ${err}`);
-                          console.log(err);
-                        })
-                    break;
-                }
-              })
-              .catch(err => {
-                chan.send(`Error ending round: ${err}`)
-                console.log(err)
-              })
-            }, 500)
-            clearInterval(timeout)
-          }
-          else if (stop_tourney){
-            start = end
-            stop_tourney = false
-            clearInterval(timeout)
-          }
-          formatTime(end - start)
-          embed.embed.fields[3].value = info.time //update time
-          if (start < end) { //keep updating time until time reaches 0
-            timerMsg.edit(embed)
-            .then()
-            .catch(err => {
-              msg.channel.send(`Error updating timer: ${err}`)
-              console.log(err)
-            })
-          }
-        }, 60000);
-      }
     }
 
-    else if (msg.content == ('*clear!') && isAdmin) {
+    //Reset Tournament Settings command
+    else if (msg.content == '*clear!' && isAdmin) {
       if (!(syst.info.settings.tournament_started)) {
         msg.channel.send("Clearing tournament settings...")
         .then(progMsg => {
@@ -658,45 +459,544 @@ client.on('message', msg => {
       }
     }
 
-    else if (msg.content == ('*endround!') && isAdmin){
+    //End Tournament Round command
+    else if (msg.content == '*endround!' && isAdmin) {
       if (syst.info.settings.tournament_started) {
         msg.channel.send("Round ending in less than a minute...")
         .then(delMsg => delMsg.delete(60000))
         end_round = true
-        msg.delete(60000)
+        msg.delete(2000)
       }
       else {
         msg.channel.send("There's no tournament currently in progress.")
       }
     }
 
-    else if (msg.content == ('*stop!!') && isAdmin){
-      if (syst.info.settings.tournament_started) {
-        const chan = msg.guild.channels.find('name', 'triumphant');
-        //clear & reset settings
-        chal.del(syst.info.settings.week_title)
-        redd.delPost()
-        syst.reset()
-        //confirmation and stop runTimer
-        stop_tourney = true
-        chan.send("Tournament stopped.")
-        msg.delete(60000)
+    //Cancel Tournament Round End command
+    else if (msg.content == '*cancel!' && isAdmin) {
+      if (syst.info.settings.tournament_started && end_round){
+        msg.channel.send("Cancelled round end. Match continuing.")
+        .then(delMsg => delMsg.delete(60000))
+        end_round = false
+        msg.delete(2000)
+      }
+      else if (syst.info.settings.tournament_started) {
+        msg.channel.send("The round was not called to end early.")
       }
       else {
         msg.channel.send("There's no tournament currently in progress.")
       }
     }
+
+    //Stop Tournament command
+    else if (msg.content == '*stop!!' && isAdmin) {
+      if (syst.info.settings.tournament_started) {
+        //clear & reset settings
+        chal.del(syst.info.settings.week_title)
+        redd.delPost()
+        //confirmation and stop runTimer
+        stop_tourney = true
+        msg.channel.send("Tournament stopping in less than a minute...")
+        .then(delMsg => delMsg.delete(60000))
+        msg.delete(2000)
+        setTimeout(function(){
+          stop_tourney = false
+          syst.reset()
+        }, 60000)
+      }
+      else {
+        msg.channel.send("There's no tournament currently in progress.")
+      }
+    }
+
+    //Test Error command
+    else if (msg.content == '*error!!' && isAdmin) {throw "Unknown error."}
   }
-  // all unkown errors are forwarded here
-  catch(err){
-    const error_log = msg.guild.channels.find('name', 'triumphant-format');
-    if (error_log){
-      error_log.send("An error occured, please make sure everything is okay.")
-    }
-    else{
-      msg.channel.send("An error occured, please make sure everything is okay.")
-    }
+  // all unknown errors are forwarded here
+  catch(err) {
+    msg.member.send("An unknown error occured, please make sure everything is okay.")
     console.log(err)
   }
+
+  //Tournament Functions
+
+  // Posts header image
+  // Also sets channel topic if on the first match
+  function startMatch(matchNum, voteTime = 1435){
+    const chan = msg.guild.channels.find('name', 'triumphant');
+    //start tournament and update settings
+    syst.info.settings.tournament_started = true;
+    syst.info.matches.progress.match = matchNum
+    syst.info.matches.progress.voteTime = voteTime
+    syst.save('sm')
+    console.log('Sending message in #triumphant...');
+    // change channel topic for new week
+    if (matchNum == 0) {
+      topic = "👁‍🗨 ʀᴇᴀᴅ-ᴏɴʟʏ " +
+              "\n| Channel for daily Triumphant voting." +
+              "\n| 💿 SUBMIT YOUR TRACKS HERE: " +
+              syst.info.config.submit_thread +
+              "\n| 🏅 Tournament Bracket: https://challonge.com/tw" +
+              syst.info.settings.week_title
+      chan.setTopic(topic)
+      .then(console.log("Channel topic updated."))
+      .catch(err => {
+        msg.channel.send(`Error updating channel topic: ${err}`)
+        console.log(err)
+      })
+    }
+    // get competitors from settings
+    var competitors = syst.info.matches[rounds[matchNum]]
+    // upload attachment
+    chan.send({
+      files:[syst.info.config.header_images[matchNum]]
+    }).then(setTimeout(postMatch, 2000));
+
+    // Posts daily matchup and reactions
+    function postMatch(){
+      const chan = msg.guild.channels.find('name', 'triumphant');
+      var matchup = ''
+      for (i = 0; i < 2; i++){
+          matchup += syst.info.config.emojis[i] + competitors[i].userID +
+                     ' // ' + competitors[i].title + '\n' +
+                     competitors[i].url + '\n\n'
+      }
+      chan.send(matchup)
+      .then(matchupMsg => { //react to post
+        setTimeout(function(){
+          for (i = 0; i < 2; i++){
+            matchupMsg.react(syst.info.config.emojis[i].slice(-19,-1))
+            .then()
+            .catch(err => {
+              msg.channel.send(`Error adding reactions: ${err}`)
+              console.log(err)
+            })
+          }
+        }, 1000)
+        postEmbed(matchNum, matchupMsg, voteTime)
+      })
+    }
+  }
+  // Posts embed with match and weekly triumphant info
+  function postEmbed(matchNum, matchupMsg, voteTime){
+    var competitors = syst.info.matches[rounds[matchNum]]
+    // set timer (and save points in case bot crashes)
+    // update settings
+    const chan = msg.guild.channels.find('name', 'triumphant');
+    var time = (new Date().getTime())
+    run_time = syst.info.settings.start = (time - (time % 60000)) / 60000
+    end_time = syst.info.settings.end = run_time + voteTime
+    formatTime(end_time - run_time)
+
+    //embed template
+    embed_desc = `[${competitors[0].title}](${competitors[0].url})`
+    + `\nVS\n`+ `[${competitors[1].title}](${competitors[1].url})`
+    embed = {
+      "embed": {
+        "author": {
+          "name": "Triumphant Week " + syst.info.settings.week_title
+          + ' ' + syst.info.settings.special,
+          "url": "https://challonge.com/tw"
+          + syst.info.settings.week_title,
+          "icon_url": syst.info.config.embed_icons[matchNum]
+        },
+        "description": embed_desc,
+        "color": syst.info.config.embed_colours[matchNum],
+        "footer": {
+          "icon_url": syst.info.config.footer_thumbnail,
+          "text": syst.info.settings.info
+        },
+        "thumbnail": {"url": syst.info.config.embed_thumbnail},
+        "fields": [
+          {
+            "name": "This Week's Competitors",
+            "value": syst.info.config.reddit_link
+          },
+          {
+            "name": "Tournament Bracket",
+            "value": "https://challonge.com/tw"
+            + syst.info.settings.week_title,
+          },
+          {
+            "name": "Submission Thread",
+            "value": syst.info.config.submit_thread
+          },
+          {
+            "name": "Time Left To Vote",
+            "value": info.time
+          }
+        ]
+      }
+    }
+    chan.send(embed)
+    .then(embedMsg => {
+      syst.info.settings.matchup_id = matchupMsg.id
+      syst.info.settings.embed_id = embedMsg.id
+      syst.info.settings.embed = embed
+      syst.info.matches.progress.status[matchNum] = [1,0]
+      syst.save('ms')
+      runTimer(matchNum, run_time, end_time, matchupMsg, embedMsg, voteTime)
+    })
+    .catch(err => {
+      msg.channel.send(`Error posting timer: ${err}`)
+      console.log(err)
+    })
+  }
+
+  //format time to hours and minutes
+  function formatTime(i){
+    hr = (i - (i % 60)) / 60 // integer division
+    min = i % 60
+    if (hr > 1 && min > 1) {info.time = `${hr} hours, ${min} minutes`}
+    else if (hr > 1 && min == 1) {info.time = `${hr} hours, ${min} minute`}
+    else if (hr == 1 && min > 1) {info.time = `${hr} hour, ${min} minutes`}
+    else if (hr == 1 && min == 1) {info.time = `${hr} hour, ${min} minute`}
+    else if (hr > 1) {info.time = `${hr} hours`}
+    else if (hr == 1) {info.time = `${hr} hour`}
+    else if (min > 1) {info.time = `${min} minutes`}
+    else if (min == 1) {info.time = `${min} minute`}
+  }
+
+  // start the timer on the embed
+  function runTimer(matchNum, start, end, matchupMsg, timerMsg, voteTime){
+    reacts = {}
+    embed = syst.info.settings.embed
+    in_progress = true
+    competitors = syst.info.matches[rounds[matchNum]]
+    console.log("Timer running.")
+    const chan = msg.guild.channels.find('name', 'triumphant');
+    // timer runs on a 1 minute interval
+    var timeout = setInterval(function(){
+
+      //check if the round was called to end early
+      if (end_round) {
+        start = end
+        end_round = false
+      }
+      else start += 1
+
+      // check if the tournament was called to stop early
+      if (stop_tourney) {
+        clearInterval(timeout)
+        embed.embed.fields[3].value = "Tournament Stopped"
+        delete embed.embed.color
+        timerMsg.edit(embed)
+        .then()
+        .catch(err => {
+          msg.channel.send(`Error stopping timer: ${err}`)
+          console.log(err)
+        })
+      }
+
+      //keep updating time until time reaches 0
+      else if (start < end) {
+        //update time
+        formatTime(end - start)
+        embed.embed.fields[3].value = info.time
+        timerMsg.edit(embed)
+        .then()
+        .catch(err => {
+          msg.channel.send(`Error updating timer: ${err}`)
+          console.log(err)
+        })
+      }
+
+      // when timer reaches 0, collect reaction scores and update embed
+      else if (start >= end && !(stop_tourney)) {
+        // collect scores for each reaction
+        chan.fetchMessage(matchupMsg.id).then(thisMsg => {
+          thisMsg.reactions.forEach(object => {
+            reacts[object._emoji.id] = object.count
+          })
+        })
+        //record scores and check if the score is tied
+        setTimeout(function() {
+          var score1 = reacts[syst.info.config.emojis[0].slice(-19,-1)]
+          var score2 = reacts[syst.info.config.emojis[1].slice(-19,-1)]
+          if (!score1) score1 = 0
+          if (!score2) score2 = 0
+          score_desc = `${score1}-${score2}`
+
+          //update embed to signify the match is over
+          delete embed.embed.color
+          embed.embed.fields[4] = {
+            "name": "Score",
+            "value": score_desc
+          }
+
+          //match was not a tie, continue as usual
+          if (score1 != score2) {
+            embed.embed.fields[3].value = "Voting Over"
+            timerMsg.edit(embed)
+            .then(endRound(matchNum, score1, score2, voteTime))
+            .catch(err => {
+              chan.send(`Error ending round: ${err}`)
+              console.log(err)
+            })
+          }
+
+          // match was a tie, start a 3-min sudden death
+          else if (score1 == score2) {//score2 += 1
+            embed.embed.fields[3].value = "0 minutes"
+            timerMsg.edit(embed)
+
+            /* Sudden Death Embed */
+            var time = (new Date().getTime())
+            sd_time = 3
+            formatTime(sd_time)
+
+            //embed template
+            embed_desc = `[${competitors[0].title}](${competitors[0].url})`
+            + `\nVS\n`+ `[${competitors[1].title}](${competitors[1].url})`
+            sd_embed = {
+              "embed": {
+                "author": {
+                  "name": "Sudden Death Tiebreaker",
+                  "url": "https://challonge.com/tw"
+                  + syst.info.settings.week_title,
+                  "icon_url": syst.info.config.embed_icons[matchNum]
+                },
+                "description": embed_desc,
+                "footer": {
+                  "icon_url": syst.info.config.footer_thumbnail,
+                  "text": syst.info.settings.info
+                },
+                "thumbnail": {"url": syst.info.config.embed_thumbnail},
+                "fields": [
+                  {
+                    "name":"Time Left To Vote",
+                    "value":"Loading..."
+                  },
+                  {
+                    "name":"Winner",
+                    "value":"---"
+                  },
+                  {
+                    "name":"First To Vote",
+                    "value":"---"
+                  }
+                ]
+              }
+            }
+            chan.send("**Sudden Death Tiebreaker**: "
+            + `\n${syst.info.config.emojis[0]}${competitors[0].userID} VS`
+            + `${competitors[1].userID} ${syst.info.config.emojis[1]}`
+            + "\nFirst to vote in the next 3 minutes decides the winner!"
+            + "\nVoting begins in 5 seconds...", sd_embed)
+            .then(thisMsg => {
+              sdMsg = thisMsg
+              syst.info.settings.sudden_id = sdMsg.id
+              //react to sudden death message and save to settings
+              setTimeout(function(){
+                for (i = 0; i < 2; i++) {
+                  sdMsg.react(syst.info.config.emojis[i].slice(-19,-1))
+                  .then()
+                  .catch(err => {
+                    msg.channel.send(`Error adding reactions: ${err}`)
+                    console.log(err)
+                  })
+                }
+              }, 2000)
+            })
+            .catch(err => {
+              msg.channel.send(`Error posting timer: ${err}`)
+              console.log(err)
+            })
+
+            //run timer and vote on embed
+            setTimeout(function(){
+              syst.info.settings.sudden_death = true
+              sd_embed.embed.color = 12255232
+              sd_embed.embed.fields[0].value = info.time
+              sdMsg.edit("**Sudden Death Tiebreaker**: "
+              + `\n${syst.info.config.emojis[0]}${competitors[0].userID} VS`
+              + `${competitors[1].userID} ${syst.info.config.emojis[1]}`
+              + "\nFirst to vote in the next 3 minutes decides the winner!"
+              + "\nVoting has started!", sd_embed)
+              .then()
+              .catch(err => {
+                msg.channel.send(`Error updating timer: ${err}`)
+                console.log(err)
+              })
+              syst.save()
+              //2 intervals needed
+
+              //Interval 1 checks if a vote was placed (40 ms)
+              reactCheck = setInterval(function(){
+                if (sd_vote.pick && syst.info.settings.sudden_death) {
+                  syst.info.settings.sudden_death = false
+                  sd_embed.embed.fields[0].value = "Voting Over"
+                  sd_embed.embed.fields[1].value =
+                  `${competitors[sd_vote.pick].userID} //  ${competitors[sd_vote.pick].title}`
+                  if (sd_vote.pick == '0') {
+                    sd_embed.embed.color = 16760832
+                    score1 += 1
+                  }
+                  else if (sd_vote.pick == '1') {
+                    sd_embed.embed.color = 39423
+                    score2 += 1
+                  }
+                  sd_embed.embed.fields[2].value = `<@${sd_vote.user_id}>`
+                  sdMsg.edit("**Sudden Death Tiebreaker**: "
+                  + `\n${syst.info.config.emojis[0]}${competitors[0].userID} VS`
+                  + `${competitors[1].userID} ${syst.info.config.emojis[1]}`
+                  + "\nFirst to vote in the next 3 minutes decides the winner!"
+                  + "\nVoting has ended!", sd_embed)
+                  .then(function(){
+                    delete sd_vote.pick
+                    delete sd_vote.user_id
+                    delete syst.info.settings.sudden_id
+                    endRound(matchNum, score1, score2, voteTime)
+                    clearInterval(updateTimer)
+                    clearInterval(reactCheck)
+                  })
+                  .catch(err => {
+                    msg.channel.send(`Error finishing match: ${err}`)
+                    console.log(err)
+                  })
+                }
+              }, 40)
+
+              //Interval 2 updates the timer (60 sec)
+              updateTimer = setInterval(function(){
+                sd_time -= 1
+                // update the timer
+                if (sd_time > 0) {
+                  formatTime(sd_time)
+                  sd_embed.embed.fields[0].value = info.time
+                  sdMsg.edit("**Sudden Death Tiebreaker**: "
+                  + `\n${syst.info.config.emojis[0]}${competitors[0].userID} VS`
+                  + `${competitors[1].userID} ${syst.info.config.emojis[1]}`
+                  + "\nFirst to vote in the next 3 minutes decides the winner!"
+                  + "\nVoting has started!", sd_embed)
+                  .then()
+                  .catch(err => {
+                    msg.channel.send(`Error updating timer: ${err}`)
+                    console.log(err)
+                  })
+                }
+                // timer runs to 0, end the match with an auto vote
+                else if (sd_time <= 0) {
+                  syst.info.settings.sudden_death = false
+                  sd_embed.embed.fields[0].value = "Voting Over"
+                  auto = 2 * Math.random()
+                  auto_vote = auto - (auto % 1)
+                  sd_embed.embed.fields[1].value =
+                  `${competitors[auto_vote].userID} // ${competitors[auto_vote].title}`
+                  switch(auto_vote) {
+                    case 0:
+                      sd_embed.embed.color = 16760832
+                      score1 += 1
+                      break;
+                    case 1:
+                      sd_embed.embed.color = 39423
+                      score2 += 1
+                      break;
+                  }
+                  sd_embed.embed.fields[2].value = "Auto-vote by Stratos"
+                  sdMsg.edit("**Sudden Death Tiebreaker**: "
+                  + `\n${syst.info.config.emojis[0]}${competitors[0].userID} VS`
+                  + `${competitors[1].userID} ${syst.info.config.emojis[1]}`
+                  + "\nFirst to vote in the next 3 minutes decides the winner!"
+                  + "\nVoting has ended!", sd_embed)
+                  .then(function(){
+                    delete syst.info.settings.sudden_id
+                    endRound(matchNum, score1, score2, voteTime)
+                    clearInterval(reactCheck)
+                    clearInterval(updateTimer)
+                  })
+                  .catch(err => {
+                    msg.channel.send(`Error finishing match: ${err}`)
+                    console.log(err)
+                  })
+                }
+              }, 60000)
+            }, 5000)
+          }
+        }, 500)
+        clearInterval(timeout)
+      }
+    }, 60000);
+  }
+
+  function endRound(matchNum, score1, score2, voteTime) {
+    const chan = msg.guild.channels.find('name', 'triumphant');
+    chal.update(syst.info.settings.week_title, matchNum, score1, score2)
+    //update the match progress
+    //declare winner, move to semis/finals
+    //if this matchup is the finals, declare the winner Triumphant
+    syst.info.matches.progress.status[matchNum] = [1,1]
+    syst.save('m')
+    switch(matchNum){
+      case 0:
+        syst.info.matches.semi1[0] = (score1 > score2) ?
+        syst.info.matches.duel1[0] : syst.info.matches.duel1[1];
+        setTimeout(function(){startMatch(1, voteTime)}, 10000)
+        break;
+      case 1:
+        syst.info.matches.semi1[1] = (score1 > score2) ?
+        syst.info.matches.duel2[0] : syst.info.matches.duel2[1];
+        setTimeout(function(){startMatch(2, voteTime)}, 10000)
+        break;
+      case 2:
+        syst.info.matches.semi2[0] = (score1 > score2) ?
+        syst.info.matches.duel3[0] : syst.info.matches.duel3[1];
+        setTimeout(function(){startMatch(3, voteTime)}, 10000)
+        break;
+      case 3:
+        syst.info.matches.semi2[1] = (score1 > score2) ?
+        syst.info.matches.duel4[0] : syst.info.matches.duel4[1];
+        setTimeout(function(){startMatch(4, voteTime)}, 10000)
+        break;
+      case 4:
+        syst.info.matches.final[0] = (score1 > score2) ?
+        syst.info.matches.semi1[0] : syst.info.matches.semi1[1];
+        setTimeout(function(){startMatch(5, voteTime)}, 10000)
+        break;
+      case 5:
+        syst.info.matches.final[1] = (score1 > score2) ?
+        syst.info.matches.semi2[0] : syst.info.matches.semi2[1];
+        setTimeout(function(){startMatch(6, voteTime)}, 10000)
+        break;
+      case 6:
+        winner = syst.info.matches.winner = (score1 > score2) ?
+        syst.info.matches.final[0] : syst.info.matches.final[1];
+        winMsg = (winner.userID.length == 1) ?
+        `${winner.userID} **is Triumphant!**\n${winner.url}`:
+        `${winner.userID} **are Triumphant!**\n${winner.url}`;
+        chan.send(winMsg)
+            .then(winnerMsg => {
+              winnerMsg.react('🏆')
+              winnerMsg.react('🔥')
+              redd.editWinner(winner)
+              setTimeout(function(){
+                chal.final(syst.info.settings.week_title)
+                syst.setWeekNum((syst.info.settings.week_num) + 1)
+                syst.reset()
+              }, 1500)
+            })
+            .catch(err => {
+              chan.send(`Error declaring winner: ${err}`);
+              console.log(err);
+            })
+        break;
+    }
+  }
 });
+
+// Note: messageReactionAdd only works with cached messages
+client.on('messageReactionAdd', (react, user) => {
+  // check if someone reacted on a sudden death counter
+  if (syst.info.settings.sudden_death &&
+     (react.message.id == syst.info.settings.sudden_id) &&
+     (user.id != client.user.id)) {
+      sd_vote['user_id'] = user.id
+      //check if the reaction was one of the voting emotes
+      emotes = [syst.info.config.emojis[0].slice(-19,-1),
+                syst.info.config.emojis[1].slice(-19,-1)]
+      if (react.emoji.id == emotes[0]) {sd_vote['pick'] = '0'}
+      else if (react.emoji.id == emotes[1]) {sd_vote['pick'] = '1'}
+  }
+})
+
 client.login(disc_token);

@@ -2,7 +2,7 @@ const fs = require('fs');
 const http = require('follow-redirects').http;
 //const sc = require('node-soundcloud'); //currently not needed
 var clientID = "CLIENT_ID"
-var token = "TOKEN_HERE";
+var token = "TOKEN";
 var info = {}
 
 module.exports = {

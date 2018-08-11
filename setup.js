@@ -1,7 +1,7 @@
 /*
-- parses from tracks.json and settings.json
+- parses from matches.json and settings.json
 
-tracks.json will have 2 sets of the same 8 tracks
+matches.json will have 2 sets of the same 8 tracks
 - first set, just a general list of TrackInfos
 - second set, formatted tournament set
 */
@@ -19,6 +19,7 @@ module.exports = {
   setEmoji: setEmoji,
   setHeader: setHeader,
   setSpecial: setSpecial,
+  setSubmit: setSubmit,
   fillMatches: fillMatches,
   setWeekNum: setWeekNum,
   save: save,
@@ -26,6 +27,10 @@ module.exports = {
 }
 
 function getSetup(){
+  fs.readFile('config.json', 'utf8', (err, data) => {
+      if (err) {console.log(err)}
+      else {info['config'] = JSON.parse(data)}
+  });
   fs.readFile('matches.json', 'utf8', (err, data) => {
       if (err) {console.log(err)}
       else {info['matches'] = JSON.parse(data)}
@@ -40,28 +45,29 @@ function getSetup(){
   });
 }
 
-
 function addAdmin(role){
-  info.settings.admin_roles.push(role)
+  info.config.admin_roles.push(role)
   save('s')
 }
 
 function delAdmin(role){
-  new_list = info.settings.admin_roles.filter(admin => admin != role)
-  info.settings.admin_roles = new_list
+  new_list = info.config.admin_roles.filter(admin => admin != role)
+  info.config.admin_roles = new_list
   save('s')
 }
 
 function setEmoji(num, emote) {
+  //error catching, num
   if (num < 1 || num > 2) {
     throw "Number should be between 1 and 2."
   }
-  var emote_reg = /^<:\S+:\d+>/
-  if (!(emote.match(emote_reg))) {
+  //error catching, link
+  var emote_reg = /^<:\S+:\d+>$/
+  if (!emote.match(emote_reg)) {
     throw "Invalid emote."
   }
-  info.settings.emojis[num - 1] = emote
-  save('s')
+  info.config.emojis[num - 1] = emote
+  save('c')
 }
 
 function setHeader(num, link) {
@@ -70,13 +76,22 @@ function setHeader(num, link) {
     throw "Number should be between 1 and 8."
   }
   //error catching, link
-  var link_reg =
-  /^(http|https):\/\/(www.)?\S+?.\S+?\/\S+?.(png|jpg)$/i;
-  if (!(link.match(link_reg))) {
+  var link_reg = /^(http|https):\/\/(www.)?\S+?.\S+?\/\S+?.(png|jpg)$/i;
+  if (!link.match(link_reg)) {
     throw "Invalid image link."
   }
-  info.settings.header_images[num - 1] = link
-  save('s')
+  info.config.header_images[num - 1] = link
+  save('c')
+}
+
+function setSubmit(link){
+  //error catching, link
+  var link_reg = /^(http|https):\/\/redd.it\/\S+?$/i;
+  if (!link.match(link_reg)) {
+    throw "Invalid link, must be a redd.it link"
+  }
+  info.config.submit_thread = link
+  save('c')
 }
 
 function setSpecial(desc){
@@ -109,7 +124,10 @@ function setTrack(num, link, tags) {
     else if (tags[i].startsWith('\\')) tags[i] = " " + tags[i].slice(1)
     else if (tags[i].startsWith('<')) tags[i] = " " + tags[i]
   }
-
+  // error catching, match already played
+  if (2 * (info.matches.progress.match + 1) >= num) {
+    throw "Competitor has played or is playing match."
+  }
   // run function
   setTimeout(function() {
     var title = (sc.info.title.includes(sc.info.name)
@@ -159,7 +177,7 @@ function fillMatches(option = '12345678'){
   save('m')
 }
 
-function save(option = "ms"){
+function save(option = "msc"){
   try {
     if (option.includes('m')) {
         fs.writeFile('matches.json', JSON.stringify(info.matches), 'utf8',
@@ -167,6 +185,10 @@ function save(option = "ms"){
     }
     if (option.includes('s')) {
         fs.writeFile('settings.json', JSON.stringify(info.settings), 'utf8',
+        function(){})
+    }
+    if (option.includes('c')) {
+        fs.writeFile('config.json', JSON.stringify(info.config), 'utf8',
         function(){})
     }
   }
@@ -178,7 +200,7 @@ function save(option = "ms"){
 function reset(option = 'rs'){
   //reset matches
   if (option.includes('r')) { //reset match settings
-    info.matches.progress.match = 0
+    info.matches.progress.match = -1
     info.matches.progress.status = [[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]]
     info.matches.semi1[0] = info.matches.semi1[1] = info.matches.semi2[0] =
     info.matches.semi2[1] = info.matches.final[0] = info.matches.final[1] =
@@ -193,8 +215,11 @@ function reset(option = 'rs'){
     delete info.settings.matchup_id
     delete info.settings.embed_id
     delete info.settings.embed
+    delete info.settings.sudden_id
     delete info.settings.reddit_info
+    delete info.config.reddit_link
     info.settings.special = ""
+    info.settings.sudden_death = false
     info.settings.tournament_started = false
   }
   save()

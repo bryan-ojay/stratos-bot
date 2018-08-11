@@ -2,12 +2,13 @@ const fs = require('fs');
 const challonge = require('challonge');
 const syst = require('./setup.js');
 const client = challonge.createClient({
-  apiKey: 'API_KEY_HERE',
+  apiKey: 'API_KEY_HERE'
 })
 
 module.exports = {
   create: create,
   update: update,
+  change: change,
   final: final,
   del: del
 }
@@ -17,7 +18,7 @@ function create() {
   client.tournaments.create({
     'tournament': {
       'name': `Triumphant Week ${week_title} ${syst.info.settings.special}`,
-      'url': 'tw_' + week_title,
+      'url': 'tw' + week_title,
       'description': 'Week ' + week_title +
           ' of Elevate\'s Triumphant Competition. ' +
           'Join the Elevate Discord: https://discord.io/elevate',
@@ -33,27 +34,29 @@ function create() {
   });
 
   setTimeout(function(){
-    i = 7
+    i = 8
     part_add = setInterval(function(){
-
-      player = syst.info.matches.tracks[i].title
-      if (player.includes("&")) player.replace(/&/g, "%26")
-
+      i--;
+      // replace '&' with HTML format to fix title cutoff bug
+      player = syst.info.matches.tracks[i].title.replace(/&/g, "%26")
       client.participants.create({
-        'id': 'tw_' + week_title,
+        'id': 'tw' + week_title,
         'participant': {
           'name': player,
           'seed': 1
         },
         callback: (err, data) => {
           if (err) {
+            // Outer layer is attempt 1 of adding the title
+            // Inner layer is attempt 2, adds the competitor number to the
+            // title
             console.log ("Outer layer: " + i, err)
 
             //reenter the participant
             client.participants.create({
-              'id': 'tw_' + week_title,
+              'id': 'tw' + week_title,
               'participant': {
-                'name': syst.info.matches.tracks[i].title + ' ' + `(${i + 1})`,
+                'name': player + ' ' + `(${i + 1})`,
                 'seed': 1
               },
               callback: (err, data) => {
@@ -63,14 +66,13 @@ function create() {
             })
           }
           else{console.log('Participant added.')}
-          i--
         }
       })
       if (i == 0) {
         clearInterval(part_add)
         setTimeout(function(){
           client.tournaments.start({
-            id: 'tw_' + week_title,
+            id: 'tw' + week_title,
             callback: (err, data) => {
               if (err){console.log(err);}
               else{console.log('Tournament started.')}
@@ -84,7 +86,7 @@ function create() {
 
 function del(week_title){
   client.tournaments.destroy({
-    id: 'tw_' + week_title,
+    id: 'tw' + week_title,
     callback: (err, data) => {
       if (err){console.log(err)}
       else{console.log('Tournament deleted.')}
@@ -92,9 +94,32 @@ function del(week_title){
   })
 }
 
+function change(week_title, player_num, player_name) {
+  client.participants.index({
+    'id': 'tw' + week_title,
+    callback: (err, data) => {
+      if (err){console.log(err)};
+      console.log("Participants retrieved.")
+      part_id = data[`${player_num}`].participant.id
+
+      client.participants.update({
+        'id': 'tw' + week_title,
+        'participant_id': part_id,
+        'participant': {
+          'name': player_name
+        },
+        callback: (err, data) => {
+          if (err){console.log(err, 'tw' + week_title, player_num, player_name, part_id);}
+          else{console.log('Participant updated.')}
+        }
+      })
+    }
+  })
+}
+
 function update(week_title, match_num, p1score, p2score) {
   client.matches.index({
-    'id': 'tw_' + week_title,
+    'id': 'tw' + week_title,
     callback: (err, data) => {
       if (err){console.log(err)};
       matches = data;
@@ -108,23 +133,23 @@ function update(week_title, match_num, p1score, p2score) {
     var match_winner = (p1score > p2score) ?
     player_match.match.player1Id : player_match.match.player2Id;
     client.matches.update({
-    'id': 'tw_' + week_title,
-    'match_id': match_id,
-    'match': {
-      'scores_csv': `${p1score}-${p2score}`,
-      'winner_id': match_winner
-    },
-    callback: (err, data) => {
-      if (err){console.log(err);}
-      else{console.log('Match updated.')}
-    }
+      'id': 'tw' + week_title,
+      'match_id': match_id,
+      'match': {
+        'scores_csv': `${p1score}-${p2score}`,
+        'winner_id': match_winner
+      },
+      callback: (err, data) => {
+        if (err){console.log(err);}
+        else{console.log('Match updated.')}
+      }
     });
-  }, 700)
+  }, 1000)
 }
 
 function final(week_title) {
   client.tournaments.finalize({
-    'id': 'tw_' + week_title,
+    'id': 'tw' + week_title,
     callback: (err, data) => {
       if (err){console.log(err);}
       else{console.log('Tournament finalized.')}

@@ -9,19 +9,19 @@
 			"artist": "Artist 2",
 			"title": "Artist 2 - Title 2",
 			"url": "https://soundcloud.com/artist/track-name",
-			"userID": [" <@432004354329935875>", " <@159985870458322944>"]
+			"userID": [" <@432004354329935875>", " <@446863143386218505>"]
 		},
 		{
 			"artist": "Artist 3",
 			"title": "Artist 3 - Title 3",
 			"url": "https://soundcloud.com/artist/track-name",
-			"userID": [" <@432004354329935875>"]
+			"userID": [" <@446863143386218505>"]
 		},
 		{
 			"artist": "Artist 4",
 			"title": "Artist 4 - Title 4",
 			"url": "https://soundcloud.com/artist/track-name",
-			"userID": [" <@432004354329935875>", " <@159985870458322944>"]
+			"userID": [" <@432004354329935875>", " <@446863143386218505>"]
 		},
 		{
 			"artist": "Artist 5",
@@ -33,19 +33,19 @@
 			"artist": "Artist 6",
 			"title": "Artist 6 - Title 6",
 			"url": "https://soundcloud.com/artist/track-name",
-			"userID": [" <@432004354329935875>", " <@159985870458322944>"]
+			"userID": [" <@432004354329935875>", " <@446863143386218505>"]
 		},
 		{
 			"artist": "Artist 7",
 			"title": "Artist 7 - Title 7",
 			"url": "https://soundcloud.com/artist/track-name",
-			"userID": [" <@432004354329935875>"]
+			"userID": [" <@446863143386218505>"]
 		},
 		{
 			"artist": "Artist 8",
 			"title": "Artist 8 - Title 8",
 			"url": "https://soundcloud.com/artist/track-name",
-			"userID": [" <@432004354329935875>", " <@159985870458322944>"]
+			"userID": [" <@432004354329935875>", " <@446863143386218505>"]
 		}
 	],
 	"duel1": [{
@@ -58,20 +58,20 @@
 			"artist": "Artist 2",
 			"title": "Artist 2 - Title 2",
 			"url": "https://soundcloud.com/artist/track-name",
-			"userID": [" <@432004354329935875>", " <@159985870458322944>"]
+			"userID": [" <@432004354329935875>", " <@446863143386218505>"]
 		}
 	],
 	"duel2": [{
 			"artist": "Artist 3",
 			"title": "Artist 3 - Title 3",
 			"url": "https://soundcloud.com/artist/track-name",
-			"userID": [" <@432004354329935875>"]
+			"userID": [" <@446863143386218505>"]
 		},
 		{
 			"artist": "Artist 4",
 			"title": "Artist 4 - Title 4",
 			"url": "https://soundcloud.com/artist/track-name",
-			"userID": [" <@432004354329935875>", " <@159985870458322944>"]
+			"userID": [" <@432004354329935875>", " <@446863143386218505>"]
 		}
 	],
 	"duel3": [{
@@ -84,20 +84,20 @@
 			"artist": "Artist 6",
 			"title": "Artist 6 - Title 6",
 			"url": "https://soundcloud.com/artist/track-name",
-			"userID": [" <@432004354329935875>", " <@159985870458322944>"]
+			"userID": [" <@432004354329935875>", " <@446863143386218505>"]
 		}
 	],
 	"duel4": [{
 			"artist": "Artist 7",
 			"title": "Artist 7 - Title 7",
 			"url": "https://soundcloud.com/artist/track-name",
-			"userID": [" <@432004354329935875>"]
+			"userID": [" <@446863143386218505>"]
 		},
 		{
 			"artist": "Artist 8",
 			"title": "Artist 8 - Title 8",
 			"url": "https://soundcloud.com/artist/track-name",
-			"userID": [" <@432004354329935875>", " <@159985870458322944>"]
+			"userID": [" <@432004354329935875>", " <@446863143386218505>"]
 		}
 	],
 	"semi1": [{
@@ -146,7 +146,7 @@
 		"userID": null
 	},
 	"progress": {
-		"match": 0,
+		"match": -1,
 		"voteTime": 1435,
 		"status": [
 			[0, 0],
