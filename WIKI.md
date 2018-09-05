@@ -23,7 +23,7 @@ All of the code used to operate within the SoundCloud API can be found mostly in
 ## Reddit API
 
 Stratos uses the [Reddit API](https://www.reddit.com/dev/api/) via the [snoowrap module](https://github.com/not-an-aardvark/snoowrap) to post the tracks for each weekly tournament on the [Elevate subreddit](https://reddit.com/r/elevate).
-Using the Reddit APi, Stratos is able to create, edit, and add flairs to posts made on a provided reddit account. 
+Using the Reddit API, Stratos is able to create, edit, and add flairs to posts made on a provided reddit account. 
 All of the code used to operate within the Reddit API can be found mostly in the [reddit.js file](https://github.com/bryan-ojay/stratos-bot/blob/master/reddit.js).
 An example of the Reddit posts can be found [here](https://redd.it/9cl1am).
 
