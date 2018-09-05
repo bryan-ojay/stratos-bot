@@ -4,7 +4,7 @@ This bot, known as Stratos, was made to be used over the [Discord API](https://d
 The purpose of Stratos is to automate the process of creating "Song of the Week" tournaments, known as Triumphant in the Elevate Discord.
 
 Stratos was coded using [node.js](https://nodejs.org), mainly with the [discord.js](https://discord.js.org) module.
-For security reasons, all API keys and access tokens are hidden in this repository.
+For security reasons, all API keys and access tokens are hidden in this repository. The full repository with all included tokens and keys is privated here: https://gitlab.com/bryan-ojay/stratos-bot
 
 Stratos makes use of several APIs, which are listed below:
 
