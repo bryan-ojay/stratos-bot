@@ -1,7 +1,7 @@
 # Stratos, A Tournament Bot
 
 This bot, known as Stratos, was made to be used over the [Discord API](https://discordapp.com/developers/docs/).
-The primary purpose of this bot was to automate the process of creating weekly "Song of the Week" tournmanents in the [Elevate Discord Server](https://discord.io/elevate), where users would vote for their favourite song out of 8 choices, every week.
+The primary purpose of this bot was to automate the process of creating weekly "Song of the Week" tournaments in the [Elevate Discord Server](https://discord.io/elevate), where users would vote for their favourite song out of 8 choices, every week.
 
 Stratos was coded using [node.js](https://nodejs.org), mainly with the [discord.js](https://discord.js.org) module.
 For security reasons, all API keys and access tokens are hidden in this repository. The full repository with all included tokens and keys is privated here: https://gitlab.com/bryan-ojay/stratos-bot
