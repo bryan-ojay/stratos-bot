@@ -4,7 +4,7 @@ This bot, known as Stratos, was made to be used over the [Discord API](https://d
 The primary purpose of this bot was to automate the process of creating weekly "Song of the Week" tournaments in the [Elevate Discord Server](https://discord.io/elevate), where users would vote for their favourite song out of 8 choices, every week.
 
 Stratos was coded using [node.js](https://nodejs.org), mainly with the [discord.js](https://discord.js.org) module.
-For security reasons, all API keys and access tokens are hidden in this repository. The full repository with all included tokens and keys is privated here: https://gitlab.com/bryan-ojay/stratos-bot
+For security reasons, all API keys and access tokens are hidden in this repository.
 
 Stratos makes use of multiple APIs, which are listed below:
 
@@ -16,7 +16,7 @@ All of the code used to operate within the Discord API can be found in the [bot.
 
 ## SoundCloud API
 
-Stratos uses the [SoundCloud API](https://developers.soundcloud.com/docs/api/guid) to obtain SoundCloud tracks for the weekly tournaments. 
+Stratos uses the [SoundCloud API](https://developers.soundcloud.com/docs/api/guide) to obtain SoundCloud tracks for the weekly tournaments. 
 Though not implemented at the moment, Stratos will be able to like, repost and add the obtained SoundCloud tracks to playlists in the near future. 
 All of the code used to operate within the SoundCloud API can be found mostly in the [soundcloud.js file](https://github.com/bryan-ojay/stratos-bot/blob/master/soundcloud.js).
 
